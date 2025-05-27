@@ -43,6 +43,15 @@
       left: 50%;
       transform: translate(-50%, -50%);
     }
+
+    .enemy {
+  width: 40px;
+  height: 40px;
+  background: cyan;
+  border-radius: 50%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
   </style>
 </head>
 <body>
@@ -50,7 +59,74 @@
     <div id="rotator"></div>
   </div>
 
+  <div id="gameOverMessage" style="
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  color: red;
+  font-family: sans-serif;
+  z-index: 1000;
+">GAME OVER</div>
   <script>
+
+let gameOver = false;
+
+const enemies = [];
+const enemySpeed = 1.5;
+const centerX = window.innerWidth / 2;
+const centerY = window.innerHeight / 2;
+
+// Spawn one enemy every N ms
+setInterval(spawnEnemy, 1000);
+
+function spawnEnemy() {
+  const buffer = 50;
+  const enemy = document.createElement('div');
+  enemy.classList.add('projectile', "enemy"); // same style as projectile for now (can be customized)
+
+  let x, y;
+
+  // Randomly choose one side to spawn from
+  const side = Math.floor(Math.random() * 4);
+  switch (side) {
+    case 0: // top
+      x = Math.random() * window.innerWidth;
+      y = -buffer;
+      break;
+    case 1: // bottom
+      x = Math.random() * window.innerWidth;
+      y = window.innerHeight + buffer;
+      break;
+    case 2: // left
+      x = -buffer;
+      y = Math.random() * window.innerHeight;
+      break;
+    case 3: // right
+      x = window.innerWidth + buffer;
+      y = Math.random() * window.innerHeight;
+      break;
+  }
+
+  enemy.style.left = `${x}px`;
+  enemy.style.top = `${y}px`;
+
+  // Calculate velocity toward center
+  const dx = centerX - x;
+  const dy = centerY - y;
+  const length = Math.hypot(dx, dy);
+  const vx = (dx / length) * enemySpeed;
+  const vy = (dy / length) * enemySpeed;
+
+  enemies.push({ el: enemy, x, y, vx, vy });
+  container.appendChild(enemy);
+}
+
+
+
+
     const keyStates = {
       ArrowLeft: false,
       ArrowRight: false,
@@ -98,46 +174,113 @@
     }
 
     function animate() {
-      // Rotation logic
-      if (keyStates.ArrowLeft) rotation -= rotationSpeed;
-      if (keyStates.ArrowRight) rotation += rotationSpeed;
-      rotation = (rotation + 360) % 360;
-      rotator.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+  // Rotation logic
+  if (keyStates.ArrowLeft) rotation -= rotationSpeed;
+  if (keyStates.ArrowRight) rotation += rotationSpeed;
+  rotation = (rotation + 360) % 360;
+  rotator.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 
-      // Fire logic
-      if (keyStates.Space) {
-        fireProjectile();
-        keyStates.Space = false; // prevent repeated firing on hold
-      }
+  // Fire logic
+  if (keyStates.Space) {
+    fireProjectile();
+    keyStates.Space = false;
+  }
 
-      // Update and clean projectiles
-      const buffer = 50;
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+  // Update projectiles
+  const buffer = 50;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
 
-      for (let i = projectiles.length - 1; i >= 0; i--) {
-        const p = projectiles[i];
-        p.x += p.vx;
-        p.y += p.vy;
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.el.style.left = `${p.x}px`;
+    p.el.style.top = `${p.y}px`;
 
-        // Move on screen
-        p.el.style.left = `${p.x}px`;
-        p.el.style.top = `${p.y}px`;
-
-        // Check bounds
-        if (
-          p.x < -buffer || p.x > width + buffer ||
-          p.y < -buffer || p.y > height + buffer
-        ) {
-          p.el.remove();         // Remove from DOM
-          projectiles.splice(i, 1); // Remove from array
-        }
-      }
-
-      requestAnimationFrame(animate);
+    if (p.x < -buffer || p.x > width + buffer || p.y < -buffer || p.y > height + buffer) {
+      p.el.remove();
+      projectiles.splice(i, 1);
     }
+  }
+
+  // Update enemies
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    e.x += e.vx;
+    e.y += e.vy;
+    e.el.style.left = `${e.x}px`;
+    e.el.style.top = `${e.y}px`;
+
+    // Optional: remove if close enough to center
+    if (Math.hypot(e.x - centerX, e.y - centerY) < 10) {
+      e.el.remove();
+      enemies.splice(i, 1);
+    }
+  }
+
+
+
+  // Check for collisions between projectiles and enemies
+for (let i = projectiles.length - 1; i >= 0; i--) {
+  const p = projectiles[i];
+  const px = p.x;
+  const py = p.y;
+
+  for (let j = enemies.length - 1; j >= 0; j--) {
+    const e = enemies[j];
+    const ex = e.x;
+    const ey = e.y;
+
+    const dist = Math.hypot(px - ex, py - ey);
+    const hitRadius = 25; // Adjust based on projectile + enemy size
+
+    if (dist < hitRadius) {
+      // Collision detected
+      p.el.remove();
+      e.el.remove();
+      projectiles.splice(i, 1);
+      enemies.splice(j, 1);
+      break; // Stop checking this projectile
+    }
+  }
+}
+
+
+
+
+// Check collision between player and enemies
+const playerX = centerX;
+const playerY = centerY;
+const playerRadius = 20; // half the triangle width
+
+for (let i = 0; i < enemies.length; i++) {
+  const e = enemies[i];
+  const dist = Math.hypot(e.x - playerX, e.y - playerY);
+  const enemyRadius = 20; // half enemy size (if 40px enemies)
+
+  if (dist < playerRadius + enemyRadius) {
+    gameOver = true;
+    document.getElementById('gameOverMessage').style.display = 'block';
+    return; // stop the animation loop
+  }
+}
+
+
+
+if (!gameOver) { requestAnimationFrame(animate); }
+}
 
     animate();
+
+
+
+
+
+
+
+
+
   </script>
 </body>
 </html>
