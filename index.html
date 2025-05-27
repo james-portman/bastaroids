@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rotation and Fire</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      width: 100%;
+      background-color: #111;
+    }
+
+    #container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    #rotator {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 40px solid lime;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(0deg);
+      transform-origin: center;
+    }
+
+    .projectile {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="rotator"></div>
+  </div>
+
+  <script>
+    const keyStates = {
+      ArrowLeft: false,
+      ArrowRight: false,
+      Space: false
+    };
+
+    let rotation = 0;
+    const rotationSpeed = 2;
+    const projectiles = [];
+    const projectileSpeed = 5;
+    const rotator = document.getElementById('rotator');
+    const container = document.getElementById('container');
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code in keyStates) keyStates[e.code] = true;
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.code in keyStates) keyStates[e.code] = false;
+    });
+
+    function fireProjectile() {
+      const angleRad = rotation * Math.PI / 180;
+      const proj = document.createElement('div');
+      proj.classList.add('projectile');
+
+      const containerRect = container.getBoundingClientRect();
+      const startX = containerRect.width / 2;
+      const startY = containerRect.height / 2;
+
+      // Set initial position
+      proj.style.left = `${startX}px`;
+      proj.style.top = `${startY}px`;
+
+      // Store projectile info
+      projectiles.push({
+        el: proj,
+        x: startX,
+        y: startY,
+        vx: Math.sin(angleRad) * projectileSpeed,
+        vy: -Math.cos(angleRad) * projectileSpeed
+      });
+
+      container.appendChild(proj);
+    }
+
+    function animate() {
+      // Rotation logic
+      if (keyStates.ArrowLeft) rotation -= rotationSpeed;
+      if (keyStates.ArrowRight) rotation += rotationSpeed;
+      rotation = (rotation + 360) % 360;
+      rotator.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+
+      // Fire logic
+      if (keyStates.Space) {
+        fireProjectile();
+        keyStates.Space = false; // prevent repeated firing on hold
+      }
+
+      // Update and clean projectiles
+      const buffer = 50;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Move on screen
+        p.el.style.left = `${p.x}px`;
+        p.el.style.top = `${p.y}px`;
+
+        // Check bounds
+        if (
+          p.x < -buffer || p.x > width + buffer ||
+          p.y < -buffer || p.y > height + buffer
+        ) {
+          p.el.remove();         // Remove from DOM
+          projectiles.splice(i, 1); // Remove from array
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
