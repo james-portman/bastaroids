@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Rotation and Fire</title>
+  <title>Bastaroids</title>
   <style>
     html, body {
       margin: 0;
@@ -127,56 +127,59 @@ function spawnEnemy() {
 
 
 
-    const keyStates = {
-      ArrowLeft: false,
-      ArrowRight: false,
-      Space: false
-    };
+const keyStates = {
+  ArrowLeft: false,
+  ArrowRight: false,
+  KeyA: false,
+  KeyD: false,
+  Space: false
+};
 
-    let rotation = 0;
-    const rotationSpeed = 2;
-    const projectiles = [];
-    const projectileSpeed = 5;
-    const rotator = document.getElementById('rotator');
-    const container = document.getElementById('container');
+let rotation = 0;
+const rotationSpeed = 2;
+const projectiles = [];
+const projectileSpeed = 5;
+const rotator = document.getElementById('rotator');
+const container = document.getElementById('container');
 
-    document.addEventListener('keydown', (e) => {
-      if (e.code in keyStates) keyStates[e.code] = true;
-    });
+document.addEventListener('keydown', (e) => {
+  // console.log(e.code);
+  if (e.code in keyStates) keyStates[e.code] = true;
+});
 
-    document.addEventListener('keyup', (e) => {
-      if (e.code in keyStates) keyStates[e.code] = false;
-    });
+document.addEventListener('keyup', (e) => {
+  if (e.code in keyStates) keyStates[e.code] = false;
+});
 
-    function fireProjectile() {
-      const angleRad = rotation * Math.PI / 180;
-      const proj = document.createElement('div');
-      proj.classList.add('projectile');
+function fireProjectile() {
+  const angleRad = rotation * Math.PI / 180;
+  const proj = document.createElement('div');
+  proj.classList.add('projectile');
 
-      const containerRect = container.getBoundingClientRect();
-      const startX = containerRect.width / 2;
-      const startY = containerRect.height / 2;
+  const containerRect = container.getBoundingClientRect();
+  const startX = containerRect.width / 2;
+  const startY = containerRect.height / 2;
 
-      // Set initial position
-      proj.style.left = `${startX}px`;
-      proj.style.top = `${startY}px`;
+  // Set initial position
+  proj.style.left = `${startX}px`;
+  proj.style.top = `${startY}px`;
 
-      // Store projectile info
-      projectiles.push({
-        el: proj,
-        x: startX,
-        y: startY,
-        vx: Math.sin(angleRad) * projectileSpeed,
-        vy: -Math.cos(angleRad) * projectileSpeed
-      });
+  // Store projectile info
+  projectiles.push({
+    el: proj,
+    x: startX,
+    y: startY,
+    vx: Math.sin(angleRad) * projectileSpeed,
+    vy: -Math.cos(angleRad) * projectileSpeed
+  });
 
-      container.appendChild(proj);
-    }
+  container.appendChild(proj);
+}
 
-    function animate() {
+function animate() {
   // Rotation logic
-  if (keyStates.ArrowLeft) rotation -= rotationSpeed;
-  if (keyStates.ArrowRight) rotation += rotationSpeed;
+  if (keyStates.ArrowLeft || keyStates.KeyA) { rotation -= rotationSpeed; }
+  if (keyStates.ArrowRight || keyStates.KeyD) { rotation += rotationSpeed; }
   rotation = (rotation + 360) % 360;
   rotator.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 
@@ -222,56 +225,56 @@ function spawnEnemy() {
 
 
   // Check for collisions between projectiles and enemies
-for (let i = projectiles.length - 1; i >= 0; i--) {
-  const p = projectiles[i];
-  const px = p.x;
-  const py = p.y;
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    const px = p.x;
+    const py = p.y;
 
-  for (let j = enemies.length - 1; j >= 0; j--) {
-    const e = enemies[j];
-    const ex = e.x;
-    const ey = e.y;
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      const e = enemies[j];
+      const ex = e.x;
+      const ey = e.y;
 
-    const dist = Math.hypot(px - ex, py - ey);
-    const hitRadius = 25; // Adjust based on projectile + enemy size
+      const dist = Math.hypot(px - ex, py - ey);
+      const hitRadius = 25; // Adjust based on projectile + enemy size
 
-    if (dist < hitRadius) {
-      // Collision detected
-      p.el.remove();
-      e.el.remove();
-      projectiles.splice(i, 1);
-      enemies.splice(j, 1);
-      break; // Stop checking this projectile
+      if (dist < hitRadius) {
+        // Collision detected
+        p.el.remove();
+        e.el.remove();
+        projectiles.splice(i, 1);
+        enemies.splice(j, 1);
+        break; // Stop checking this projectile
+      }
     }
   }
-}
 
 
 
 
-// Check collision between player and enemies
-const playerX = centerX;
-const playerY = centerY;
-const playerRadius = 20; // half the triangle width
+  // Check collision between player and enemies
+  const playerX = centerX;
+  const playerY = centerY;
+  const playerRadius = 20; // half the triangle width
 
-for (let i = 0; i < enemies.length; i++) {
-  const e = enemies[i];
-  const dist = Math.hypot(e.x - playerX, e.y - playerY);
-  const enemyRadius = 20; // half enemy size (if 40px enemies)
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
+    const dist = Math.hypot(e.x - playerX, e.y - playerY);
+    const enemyRadius = 20; // half enemy size (if 40px enemies)
 
-  if (dist < playerRadius + enemyRadius) {
-    gameOver = true;
-    document.getElementById('gameOverMessage').style.display = 'block';
-    return; // stop the animation loop
+    if (dist < playerRadius + enemyRadius) {
+      gameOver = true;
+      document.getElementById('gameOverMessage').style.display = 'block';
+      return; // stop the animation loop
+    }
   }
+
+
+
+  if (!gameOver) { requestAnimationFrame(animate); }
 }
 
-
-
-if (!gameOver) { requestAnimationFrame(animate); }
-}
-
-    animate();
+  animate();
 
 
 
